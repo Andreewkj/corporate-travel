@@ -30,7 +30,7 @@ final class TravelRequestService
 
             return $this->repository->save($travel);
         } catch (\Throwable $e) {
-            throw new TravelRequestException('Could not create travel request: '.$e->getMessage());
+            throw new TravelRequestException('Could not create travel request: ' . $e->getMessage());
         }
     }
 
@@ -45,5 +45,24 @@ final class TravelRequestService
     public function all(): array
     {
         return $this->repository->all();
+    }
+
+    /**
+     * @throws TravelRequestException
+     */
+    public function updateStatus(int $id, TravelRequestStatusEnum $status): TravelRequest
+    {
+        $found = $this->repository->find($id);
+
+        if (! $found) {
+            throw new TravelRequestException('Travel request not found');
+        }
+
+        $data = $found->toArray();
+        $data['status'] = $status->value;
+
+        $updated = TravelRequest::fromArray($data);
+
+        return $this->repository->save($updated);
     }
 }

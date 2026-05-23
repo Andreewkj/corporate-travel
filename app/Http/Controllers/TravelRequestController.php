@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
@@ -6,11 +7,13 @@ use App\Application\Services\TravelRequestService;
 use App\Domain\Contracts\CreateTravelRequestValidateInterface;
 use App\Domain\Contracts\LoggerInterface;
 use App\Domain\Enums\HttpStatusCodeEnum;
+use App\Domain\Enums\TravelRequestStatusEnum;
 use App\Domain\Exceptions\TravelRequestException;
-use Illuminate\Http\JsonResponse;
 use App\Http\Requests\CreateTravelRequest;
-use InvalidArgumentException;
+use App\Http\Requests\UpdateTravelStatusRequest;
 use Exception;
+use Illuminate\Http\JsonResponse;
+use InvalidArgumentException;
 
 final class TravelRequestController extends Controller
 {
@@ -57,6 +60,23 @@ final class TravelRequestController extends Controller
             return response()->json(array_map(fn($e) => $e->toArray(), $all), HttpStatusCodeEnum::OK->value);
         } catch (Exception $e) {
             $this->logger->error('Error listing travel requests: ' . $e->getMessage());
+            return response()->json(['message' => 'Internal server error'], HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value);
+        }
+    }
+
+    public function updateStatus(UpdateTravelStatusRequest $request, int $id): JsonResponse
+    {
+        try {
+            $data = $request->validated();
+            $status = TravelRequestStatusEnum::from($data['status']);
+
+            $this->service->updateStatus($id, $status);
+
+            return response()->json(['message' => 'Status updated'], HttpStatusCodeEnum::OK->value);
+        } catch (InvalidArgumentException | TravelRequestException $e) {
+            return response()->json(['message' => $e->getMessage()], HttpStatusCodeEnum::UNPROCESSABLE_ENTITY->value);
+        } catch (Exception $e) {
+            $this->logger->error('Error updating travel request status: ' . $e->getMessage());
             return response()->json(['message' => 'Internal server error'], HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value);
         }
     }

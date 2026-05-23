@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Application\DTO\User\CreateUserDTO;
@@ -37,7 +39,7 @@ final class UserController extends Controller
         } catch (InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], HttpStatusCodeEnum::UNPROCESSABLE_ENTITY->value);
         } catch (Exception $e) {
-            $this->logger->error('Error logging in user: '.$e->getMessage());
+            $this->logger->error('Error logging in user: ' . $e->getMessage());
             return response()->json(['message' => 'Internal server error'], HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value);
         }
     }
@@ -52,7 +54,7 @@ final class UserController extends Controller
         } catch (InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], HttpStatusCodeEnum::UNPROCESSABLE_ENTITY->value);
         } catch (Exception $e) {
-            $this->logger->error('Error creating user: '.$e->getMessage());
+            $this->logger->error('Error creating user: ' . $e->getMessage());
             return response()->json(['message' => 'Internal server error'], HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value);
         }
     }

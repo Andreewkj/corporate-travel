@@ -80,4 +80,18 @@ final class TravelRequestController extends Controller
             return response()->json(['message' => 'Internal server error'], HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value);
         }
     }
+
+    public function cancelRequest(int $id): JsonResponse
+    {
+        try {
+            $updated = $this->service->cancelRequest($id);
+
+            return response()->json($updated->toArray(), HttpStatusCodeEnum::OK->value);
+        } catch (TravelRequestException $e) {
+            return response()->json(['message' => $e->getMessage()], HttpStatusCodeEnum::UNPROCESSABLE_ENTITY->value);
+        } catch (Exception $e) {
+            $this->logger->error('Error cancelling travel request: ' . $e->getMessage());
+            return response()->json(['message' => 'Internal server error'], HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value);
+        }
+    }
 }

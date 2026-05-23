@@ -31,4 +31,59 @@ final class TravelRequestServiceTest extends TestCase
         $this->assertInstanceOf(TravelRequest::class, $created);
         $this->assertSame('Ana', (string) $created->requesterName());
     }
+
+    public function test_cannot_cancel_after_approved(): void
+    {
+        $mockRepo = $this->createMock(TravelRequestRepositoryInterface::class);
+
+        $mockRepo->method('find')
+            ->willReturn(TravelRequest::fromArray([
+                'id' => 1,
+                'requester_name' => 'Ana',
+                'destination' => 'Recife',
+                'start_date' => '2026-06-01',
+                'end_date' => '2026-06-05',
+                'status' => 'aprovado',
+            ]));
+
+        $mockRepo->expects($this->never())->method('save');
+
+        $service = new TravelRequestService($mockRepo);
+
+        $this->expectException(\App\Domain\Exceptions\TravelRequestException::class);
+
+        $service->updateStatus(1, \App\Domain\Enums\TravelRequestStatusEnum::CANCELADO);
+    }
+
+    public function test_cancel_sets_status_to_cancelado(): void
+    {
+        $mockRepo = $this->createMock(TravelRequestRepositoryInterface::class);
+
+        $mockRepo->method('find')
+            ->willReturn(TravelRequest::fromArray([
+                'id' => 2,
+                'requester_name' => 'Bruno',
+                'destination' => 'Olinda',
+                'start_date' => '2026-07-01',
+                'end_date' => '2026-07-05',
+                'status' => 'solicitado',
+            ]));
+
+        $mockRepo->expects($this->once())
+            ->method('save')
+            ->willReturn(TravelRequest::fromArray([
+                'id' => 2,
+                'requester_name' => 'Bruno',
+                'destination' => 'Olinda',
+                'start_date' => '2026-07-01',
+                'end_date' => '2026-07-05',
+                'status' => 'cancelado',
+            ]));
+
+        $service = new TravelRequestService($mockRepo);
+
+        $updated = $service->cancelRequest(2);
+
+        $this->assertSame('cancelado', $updated->toArray()['status']);
+    }
 }

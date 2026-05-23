@@ -8,6 +8,7 @@ Route::post('/travel-requests', [TravelRequestController::class, 'store']);
 Route::get('/travel-requests', [TravelRequestController::class, 'index']);
 Route::get('/travel-requests/{id}', [TravelRequestController::class, 'show']);
 Route::put('/travel-requests/{id}/status', [TravelRequestController::class, 'updateStatus']);
+Route::post('/travel-requests/{id}/cancel', [TravelRequestController::class, 'cancelRequest']);
 
 use App\Http\Controllers\UserController;
 

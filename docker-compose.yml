@@ -1,0 +1,74 @@
+services:
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: app
+        volumes:
+            - ./:/var/www/html
+        working_dir: /var/www/html
+        depends_on:
+            - rabbitmq
+        networks:
+            - project
+        entrypoint: ["entrypoint.sh", "php-fpm"]
+
+    web:
+        image: nginx:alpine
+        container_name: web
+        ports:
+            - "8080:80"
+        volumes:
+            - ./:/var/www/html
+            - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+        depends_on:
+            - app
+        networks:
+            - project
+
+    mysql:
+        image: mysql:8.0
+        container_name: db
+        restart: unless-stopped
+        ports:
+            - "3306:3306"
+        env_file:
+            - .env
+        environment:
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+            MYSQL_DATABASE: ${MYSQL_DATABASE}
+            MYSQL_USER: ${MYSQL_USER}
+            MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+        volumes:
+            - mysql_data:/var/lib/mysql
+        command: --default-authentication-plugin=mysql_native_password
+        networks:
+            - project
+
+    redis:
+        image: redis:7-alpine
+        container_name: redis
+        restart: unless-stopped
+        ports:
+            - "6379:6379"
+        volumes:
+            - redis_data:/data
+        networks:
+            - project
+
+    rabbitmq:
+        image: rabbitmq:3-management
+        container_name: rabbit
+        ports:
+            - "5672:5672"
+            - "15672:15672"
+        networks:
+            - project
+
+networks:
+    project:
+        driver: bridge
+
+volumes:
+    mysql_data: {}
+    redis_data: {}

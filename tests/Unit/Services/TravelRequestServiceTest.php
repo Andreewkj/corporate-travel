@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
@@ -11,7 +12,7 @@ final class TravelRequestServiceTest extends TestCase
 {
     public function test_create_calls_repository_and_returns_entity(): void
     {
-        $dto = new CreateTravelRequestDTO('Ana','Recife','2026-06-01','2026-06-05');
+        $dto = new CreateTravelRequestDTO('Ana', 'Recife', '2026-06-01', '2026-06-05');
 
         $mockRepo = $this->createMock(TravelRequestRepositoryInterface::class);
         $mockRepo->expects($this->once())

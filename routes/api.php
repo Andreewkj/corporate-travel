@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
@@ -13,10 +14,10 @@ Route::post('/travel-requests/{id}/cancel', [TravelRequestController::class, 'ca
 use App\Http\Controllers\UserController;
 
 Route::group(['prefix' => '/user'], function () {
-	Route::post('/login', [UserController::class, 'login']);
-	Route::post('/create', [UserController::class, 'store']);
+    Route::post('/login', [UserController::class, 'login']);
+    Route::post('/create', [UserController::class, 'store']);
 });
 
 Route::group(['middleware' => ['auth:sanctum']], function () {
-	// future protected routes
+    // future protected routes
 });

@@ -18,7 +18,8 @@ final class TravelRequest
         private TravelDate $startDate,
         private ?TravelDate $endDate,
         private TravelRequestStatusEnum $status = TravelRequestStatusEnum::SOLICITADO
-    ) {}
+    ) {
+    }
 
     public function id(): ?int
     {
@@ -52,13 +53,17 @@ final class TravelRequest
 
     public static function fromArray(array $data): self
     {
+        $status = isset($data['status'])
+            ? TravelRequestStatusEnum::from($data['status'])
+            : TravelRequestStatusEnum::SOLICITADO;
+
         return new self(
             $data['id'] ?? null,
             new RequesterName($data['requester_name']),
             new Destination($data['destination']),
             new TravelDate($data['start_date']),
             isset($data['end_date']) ? new TravelDate($data['end_date']) : null,
-            isset($data['status']) ? TravelRequestStatusEnum::from($data['status']) : TravelRequestStatusEnum::SOLICITADO
+            $status
         );
     }
 

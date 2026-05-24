@@ -12,7 +12,9 @@ use App\Domain\Exceptions\TravelRequestException;
 
 final class TravelRequestService
 {
-    public function __construct(private TravelRequestRepositoryInterface $repository) {}
+    public function __construct(private TravelRequestRepositoryInterface $repository)
+    {
+    }
 
     /**
      * @throws TravelRequestException
@@ -59,7 +61,10 @@ final class TravelRequestService
         }
 
         // Business rule: do not allow canceling a request that is already approved
-        if ($status === TravelRequestStatusEnum::CANCELADO && $travelRequest->status() === TravelRequestStatusEnum::APROVADO) {
+        if (
+            $status === TravelRequestStatusEnum::CANCELADO
+            && $travelRequest->status() === TravelRequestStatusEnum::APROVADO
+        ) {
             throw new TravelRequestException('Cannot cancel an approved travel request');
         }
 

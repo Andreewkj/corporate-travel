@@ -11,5 +11,6 @@ final class CreateTravelRequestDTO
         public string $destination,
         public string $startDate,
         public string $endDate
-    ) {}
+    ) {
+    }
 }

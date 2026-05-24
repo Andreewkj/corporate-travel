@@ -23,7 +23,8 @@ final class UserController extends Controller
         private readonly UserService $userService,
         private readonly LoginUserRequest $loginUserRequest,
         private readonly LoggerInterface $logger
-    ) {}
+    ) {
+    }
 
     public function login(Request $request): JsonResponse
     {
@@ -31,16 +32,29 @@ final class UserController extends Controller
             $credentials = $this->loginUserRequest->validate($request->only('email', 'password'));
 
             if (Auth::attempt($credentials)) {
-                $token = $request->user()->createToken('apiToken')->plainTextToken;
-                return response()->json(['token' => $token], HttpStatusCodeEnum::OK->value);
+                $token = $request->user()->createToken('apiToken')
+                    ->plainTextToken;
+
+                return response()->json(
+                    ['token' => $token],
+                    HttpStatusCodeEnum::OK->value
+                );
             }
 
             return response()->json(['message' => 'Invalid credentials'], 401);
         } catch (InvalidArgumentException $e) {
-            return response()->json(['message' => $e->getMessage()], HttpStatusCodeEnum::UNPROCESSABLE_ENTITY->value);
+            return response()->json(
+                ['message' => $e->getMessage()],
+                HttpStatusCodeEnum::UNPROCESSABLE_ENTITY->value
+            );
         } catch (Exception $e) {
-            $this->logger->error('Error logging in user: ' . $e->getMessage());
-            return response()->json(['message' => 'Internal server error'], HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value);
+            $msg = 'Error logging in user: ' . $e->getMessage();
+            $this->logger->error($msg);
+
+            return response()->json(
+                ['message' => 'Internal server error'],
+                HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value
+            );
         }
     }
 
@@ -48,14 +62,27 @@ final class UserController extends Controller
     {
         try {
             $dto = $this->createUserRequest->validate($request->all());
-            $user = $this->userService->createUser(new CreateUserDTO($dto->name, $dto->email, $dto->password));
+            $user = $this->userService->createUser(
+                new CreateUserDTO($dto->name, $dto->email, $dto->password)
+            );
 
-            return response()->json(['id' => $user->id], HttpStatusCodeEnum::CREATED->value);
+            return response()->json(
+                ['id' => $user->id],
+                HttpStatusCodeEnum::CREATED->value
+            );
         } catch (InvalidArgumentException $e) {
-            return response()->json(['message' => $e->getMessage()], HttpStatusCodeEnum::UNPROCESSABLE_ENTITY->value);
+            return response()->json(
+                ['message' => $e->getMessage()],
+                HttpStatusCodeEnum::UNPROCESSABLE_ENTITY->value
+            );
         } catch (Exception $e) {
-            $this->logger->error('Error creating user: ' . $e->getMessage());
-            return response()->json(['message' => 'Internal server error'], HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value);
+            $msg = 'Error creating user: ' . $e->getMessage();
+            $this->logger->error($msg);
+
+            return response()->json(
+                ['message' => 'Internal server error'],
+                HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value
+            );
         }
     }
 }

@@ -6,7 +6,6 @@ namespace App\Infra\Repositories;
 
 use App\Domain\Contracts\Repositories\TravelRequestRepositoryInterface;
 use App\Domain\Entities\TravelRequest;
-use App\Domain\Enums\TravelRequestStatusEnum;
 use App\Models\TravelRequestModel;
 
 final class TravelRequestRepository implements TravelRequestRepositoryInterface
@@ -38,6 +37,6 @@ final class TravelRequestRepository implements TravelRequestRepositoryInterface
 
     public function all(): array
     {
-        return array_map(fn($m) => TravelRequest::fromArray($m->toArray()), TravelRequestModel::all()->all());
+        return array_map(fn ($m) => TravelRequest::fromArray($m->toArray()), TravelRequestModel::all()->all());
     }
 }

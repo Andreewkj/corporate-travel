@@ -22,7 +22,8 @@ final class TravelRequestController extends Controller
         private readonly CreateTravelRequestValidateInterface $validator,
         private readonly TravelRequestService $service,
         private readonly LoggerInterface $logger
-    ) {}
+    ) {
+    }
 
     public function store(CreateTravelRequest $request): JsonResponse
     {
@@ -31,12 +32,23 @@ final class TravelRequestController extends Controller
 
             $this->service->create($travelRequestDto);
 
-            return response()->json(['message' => 'Travel request created'], HttpStatusCodeEnum::CREATED->value);
+            return response()->json(
+                ['message' => 'Travel request created'],
+                HttpStatusCodeEnum::CREATED->value
+            );
         } catch (InvalidArgumentException | TravelRequestException $e) {
-            return response()->json(['message' => $e->getMessage()], HttpStatusCodeEnum::UNPROCESSABLE_ENTITY->value);
+            return response()->json(
+                ['message' => $e->getMessage()],
+                HttpStatusCodeEnum::UNPROCESSABLE_ENTITY->value
+            );
         } catch (Exception $e) {
-            $this->logger->error('Error creating travel request: ' . $e->getMessage());
-            return response()->json(['message' => 'Internal server error'], HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value);
+            $msg = 'Error creating travel request: ' . $e->getMessage();
+            $this->logger->error($msg);
+
+            return response()->json(
+                ['message' => 'Internal server error'],
+                HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value
+            );
         }
     }
 
@@ -47,10 +59,18 @@ final class TravelRequestController extends Controller
             if (! $found) {
                 return response()->json(['message' => 'Not found'], 404);
             }
-            return response()->json($found->toArray(), HttpStatusCodeEnum::OK->value);
+            return response()->json(
+                $found->toArray(),
+                HttpStatusCodeEnum::OK->value
+            );
         } catch (Exception $e) {
-            $this->logger->error('Error fetching travel request: ' . $e->getMessage());
-            return response()->json(['message' => 'Internal server error'], HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value);
+            $msg = 'Error fetching travel request: ' . $e->getMessage();
+            $this->logger->error($msg);
+
+            return response()->json(
+                ['message' => 'Internal server error'],
+                HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value
+            );
         }
     }
 
@@ -58,10 +78,19 @@ final class TravelRequestController extends Controller
     {
         try {
             $all = $this->service->all();
-            return response()->json(array_map(fn($e) => $e->toArray(), $all), HttpStatusCodeEnum::OK->value);
+
+            return response()->json(
+                array_map(fn ($e) => $e->toArray(), $all),
+                HttpStatusCodeEnum::OK->value
+            );
         } catch (Exception $e) {
-            $this->logger->error('Error listing travel requests: ' . $e->getMessage());
-            return response()->json(['message' => 'Internal server error'], HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value);
+            $msg = 'Error listing travel requests: ' . $e->getMessage();
+            $this->logger->error($msg);
+
+            return response()->json(
+                ['message' => 'Internal server error'],
+                HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value
+            );
         }
     }
 
@@ -73,12 +102,23 @@ final class TravelRequestController extends Controller
 
             $this->service->updateStatus($id, $status);
 
-            return response()->json(['message' => 'Status updated'], HttpStatusCodeEnum::OK->value);
+            return response()->json(
+                ['message' => 'Status updated'],
+                HttpStatusCodeEnum::OK->value
+            );
         } catch (InvalidArgumentException | TravelRequestException $e) {
-            return response()->json(['message' => $e->getMessage()], HttpStatusCodeEnum::UNPROCESSABLE_ENTITY->value);
+            return response()->json(
+                ['message' => $e->getMessage()],
+                HttpStatusCodeEnum::UNPROCESSABLE_ENTITY->value
+            );
         } catch (Exception $e) {
-            $this->logger->error('Error updating travel request status: ' . $e->getMessage());
-            return response()->json(['message' => 'Internal server error'], HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value);
+            $msg = 'Error updating travel request status: ' . $e->getMessage();
+            $this->logger->error($msg);
+
+            return response()->json(
+                ['message' => 'Internal server error'],
+                HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value
+            );
         }
     }
 
@@ -87,12 +127,23 @@ final class TravelRequestController extends Controller
         try {
             $updated = $this->service->cancelRequest($id);
 
-            return response()->json($updated->toArray(), HttpStatusCodeEnum::OK->value);
+            return response()->json(
+                $updated->toArray(),
+                HttpStatusCodeEnum::OK->value
+            );
         } catch (TravelRequestException $e) {
-            return response()->json(['message' => $e->getMessage()], HttpStatusCodeEnum::UNPROCESSABLE_ENTITY->value);
+            return response()->json(
+                ['message' => $e->getMessage()],
+                HttpStatusCodeEnum::UNPROCESSABLE_ENTITY->value
+            );
         } catch (Exception $e) {
-            $this->logger->error('Error cancelling travel request: ' . $e->getMessage());
-            return response()->json(['message' => 'Internal server error'], HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value);
+            $msg = 'Error cancelling travel request: ' . $e->getMessage();
+            $this->logger->error($msg);
+
+            return response()->json(
+                ['message' => 'Internal server error'],
+                HttpStatusCodeEnum::INTERNAL_SERVER_ERROR->value
+            );
         }
     }
 }

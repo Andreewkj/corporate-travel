@@ -9,12 +9,15 @@ use App\Domain\Contracts\Repositories\TravelRequestRepositoryInterface;
 use App\Domain\Entities\TravelRequest;
 use App\Domain\Enums\TravelRequestStatusEnum;
 use App\Domain\Exceptions\TravelRequestException;
+use App\Infra\Messaging\MessageBusPublisher;
+use App\Models\User as UserModel;
 
 final class TravelRequestService
 {
-    public function __construct(private TravelRequestRepositoryInterface $repository)
-    {
-    }
+    public function __construct(
+        private TravelRequestRepositoryInterface $repository,
+        private ?MessageBusPublisher $publisher = null
+    ) {}
 
     /**
      * @throws TravelRequestException
@@ -27,6 +30,7 @@ final class TravelRequestService
                 'destination' => $dto->destination,
                 'start_date' => $dto->startDate,
                 'end_date' => $dto->endDate,
+                'user_id' => $dto->userId,
                 'status' => TravelRequestStatusEnum::SOLICITADO->value,
             ]);
 
@@ -44,9 +48,9 @@ final class TravelRequestService
     /**
      * @return TravelRequest[]
      */
-    public function all(): array
+    public function all(array $filters = []): array
     {
-        return $this->repository->all();
+        return $this->repository->all($filters);
     }
 
     /**
@@ -61,11 +65,8 @@ final class TravelRequestService
         }
 
         // Business rule: do not allow canceling a request that is already approved
-        if (
-            $status === TravelRequestStatusEnum::CANCELADO
-            && $travelRequest->status() === TravelRequestStatusEnum::APROVADO
-        ) {
-            throw new TravelRequestException('Cannot cancel an approved travel request');
+        if ($status === TravelRequestStatusEnum::CANCELADO) {
+            $this->assertCancelable($travelRequest);
         }
 
         $data = $travelRequest->toArray();
@@ -73,36 +74,46 @@ final class TravelRequestService
 
         $updated = TravelRequest::fromArray($data);
 
-        return $this->repository->save($updated);
+        $saved = $this->repository->save($updated);
+
+        if ($this->publisher !== null && $this->shouldNotify($status)) {
+            $this->publisher->publishNotification($this->notificationPayload($saved, $status));
+        }
+
+        return $saved;
     }
 
-    /**
-     * Cancel a travel request if it's not approved yet.
-     * Returns the updated entity. If already canceled, returns it unchanged.
-     *
-     * @throws TravelRequestException
-     */
-    public function cancelRequest(int $id): TravelRequest
+    private function assertCancelable(TravelRequest $travelRequest): void
     {
-        $found = $this->repository->find($id);
-
-        if (! $found) {
-            throw new TravelRequestException('Travel request not found');
-        }
-
-        if ($found->status() === TravelRequestStatusEnum::APROVADO) {
+        if ($travelRequest->status() === TravelRequestStatusEnum::APROVADO) {
             throw new TravelRequestException('Cannot cancel an approved travel request');
         }
+    }
 
-        if ($found->status() === TravelRequestStatusEnum::CANCELADO) {
-            return $found;
+    private function shouldNotify(TravelRequestStatusEnum $status): bool
+    {
+        return in_array($status, [
+            TravelRequestStatusEnum::APROVADO,
+            TravelRequestStatusEnum::CANCELADO,
+        ], true);
+    }
+
+    private function notificationPayload(TravelRequest $travelRequest, TravelRequestStatusEnum $status): array
+    {
+        $payload = $travelRequest->toArray();
+        $payload['message'] = match ($status) {
+            TravelRequestStatusEnum::APROVADO => 'Seu pedido de viagem foi aprovado',
+            TravelRequestStatusEnum::CANCELADO => 'Seu pedido de viagem foi cancelado',
+            default => 'Seu pedido de viagem foi atualizado',
+        };
+
+        if ($travelRequest->userId()) {
+            $user = UserModel::find($travelRequest->userId());
+            if ($user) {
+                $payload['user_email'] = $user->email;
+            }
         }
 
-        $data = $found->toArray();
-        $data['status'] = TravelRequestStatusEnum::CANCELADO->value;
-
-        $updated = TravelRequest::fromArray($data);
-
-        return $this->repository->save($updated);
+        return $payload;
     }
 }

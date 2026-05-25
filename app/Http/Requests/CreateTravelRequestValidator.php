@@ -32,7 +32,8 @@ readonly class CreateTravelRequestValidator implements CreateTravelRequestValida
             $data['requester_name'],
             $data['destination'],
             $data['start_date'],
-            $data['end_date']
+            $data['end_date'],
+            $data['user_id'] ?? null
         );
     }
 }

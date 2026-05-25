@@ -4,20 +4,19 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TravelRequestController;
+use App\Http\Controllers\UserController;
 
-Route::post('/travel-requests', [TravelRequestController::class, 'store']);
+// Public read endpoints
 Route::get('/travel-requests', [TravelRequestController::class, 'index']);
 Route::get('/travel-requests/{id}', [TravelRequestController::class, 'show']);
-Route::put('/travel-requests/{id}/status', [TravelRequestController::class, 'updateStatus']);
-Route::post('/travel-requests/{id}/cancel', [TravelRequestController::class, 'cancelRequest']);
 
-use App\Http\Controllers\UserController;
+// Protected endpoints: require authenticated user (and admin where applicable)
+Route::group(['middleware' => ['auth:sanctum']], function () {
+    Route::post('/travel-requests', [TravelRequestController::class, 'store']);
+    Route::put('/travel-requests/{id}/status', [TravelRequestController::class, 'updateStatus']);
+});
 
 Route::group(['prefix' => '/user'], function () {
     Route::post('/login', [UserController::class, 'login']);
     Route::post('/create', [UserController::class, 'store']);
-});
-
-Route::group(['middleware' => ['auth:sanctum']], function () {
-    // future protected routes
 });

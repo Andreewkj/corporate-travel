@@ -35,8 +35,34 @@ final class TravelRequestRepository implements TravelRequestRepositoryInterface
         return $model ? TravelRequest::fromArray($model->toArray()) : null;
     }
 
-    public function all(): array
+    public function all(array $filters = []): array
     {
-        return array_map(fn ($m) => TravelRequest::fromArray($m->toArray()), TravelRequestModel::all()->all());
+        $query = TravelRequestModel::query();
+
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (! empty($filters['destination'])) {
+            $query->where('destination', 'like', '%' . $filters['destination'] . '%');
+        }
+
+        if (! empty($filters['requester_name'])) {
+            $query->where('requester_name', 'like', '%' . $filters['requester_name'] . '%');
+        }
+
+        if (! empty($filters['start_date'])) {
+            $query->whereDate('start_date', '>=', $filters['start_date']);
+        }
+
+        if (! empty($filters['end_date'])) {
+            $query->whereDate('end_date', '<=', $filters['end_date']);
+        }
+
+        if (! empty($filters['user_id'])) {
+            $query->where('user_id', (int) $filters['user_id']);
+        }
+
+        return array_map(fn ($m) => TravelRequest::fromArray($m->toArray()), $query->get()->all());
     }
 }

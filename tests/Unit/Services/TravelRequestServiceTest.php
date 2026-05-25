@@ -83,7 +83,7 @@ final class TravelRequestServiceTest extends TestCase
 
         $service = new TravelRequestService($mockRepo);
 
-        $updated = $service->cancelRequest(2);
+        $updated = $service->updateStatus(2, \App\Domain\Enums\TravelRequestStatusEnum::CANCELADO);
 
         $this->assertSame('cancelado', $updated->toArray()['status']);
     }

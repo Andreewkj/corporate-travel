@@ -17,9 +17,9 @@ final class TravelRequest
         private Destination $destination,
         private TravelDate $startDate,
         private ?TravelDate $endDate,
-        private TravelRequestStatusEnum $status = TravelRequestStatusEnum::SOLICITADO
-    ) {
-    }
+        private TravelRequestStatusEnum $status = TravelRequestStatusEnum::SOLICITADO,
+        private ?int $userId = null
+    ) {}
 
     public function id(): ?int
     {
@@ -51,6 +51,11 @@ final class TravelRequest
         return $this->status;
     }
 
+    public function userId(): ?int
+    {
+        return $this->userId;
+    }
+
     public static function fromArray(array $data): self
     {
         $status = isset($data['status'])
@@ -63,7 +68,8 @@ final class TravelRequest
             new Destination($data['destination']),
             new TravelDate($data['start_date']),
             isset($data['end_date']) ? new TravelDate($data['end_date']) : null,
-            $status
+            $status,
+            $data['user_id'] ?? null
         );
     }
 
@@ -76,6 +82,7 @@ final class TravelRequest
             'start_date' => (string) $this->startDate,
             'end_date' => $this->endDate ? (string) $this->endDate : null,
             'status' => $this->status->value,
+            'user_id' => $this->userId,
         ];
     }
 }

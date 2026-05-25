@@ -10,7 +10,8 @@ final class CreateTravelRequestDTO
         public string $requesterName,
         public string $destination,
         public string $startDate,
-        public string $endDate
+        public string $endDate,
+        public ?int $userId = null
     ) {
     }
 }

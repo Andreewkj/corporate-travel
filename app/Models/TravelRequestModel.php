@@ -12,6 +12,7 @@ class TravelRequestModel extends Model
 
     protected $fillable = [
         'requester_name',
+        'user_id',
         'destination',
         'start_date',
         'end_date',
@@ -21,5 +22,6 @@ class TravelRequestModel extends Model
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
+        'user_id' => 'integer',
     ];
 }

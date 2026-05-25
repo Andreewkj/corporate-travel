@@ -23,8 +23,7 @@ final class UserController extends Controller
         private readonly UserService $userService,
         private readonly LoginUserRequest $loginUserRequest,
         private readonly LoggerInterface $logger
-    ) {
-    }
+    ) {}
 
     public function login(Request $request): JsonResponse
     {

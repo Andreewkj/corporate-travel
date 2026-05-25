@@ -12,9 +12,11 @@ return new class extends Migration {
         Schema::create('travel_requests', function (Blueprint $table) {
             $table->id();
             $table->string('requester_name');
+            $table->unsignedBigInteger('user_id');
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->string('destination');
-            $table->date('start_date');
-            $table->date('end_date')->nullable();
+            $table->date('start_date')->nullable(false);
+            $table->date('end_date')->nullable(false);
             $table->string('status')->default('solicitado');
             $table->timestamps();
         });

@@ -7,6 +7,10 @@ services:
         volumes:
             - ./:/var/www/html
         working_dir: /var/www/html
+        environment:
+            DB_HOST: mysql
+            REDIS_HOST: redis
+            RABBITMQ_HOST: rabbitmq
         depends_on:
             - rabbitmq
         networks:

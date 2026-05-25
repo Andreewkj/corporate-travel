@@ -15,5 +15,5 @@ interface TravelRequestRepositoryInterface
     /**
      * @return TravelRequest[]
      */
-    public function all(): array;
+    public function all(array $filters = []): array;
 }

@@ -69,6 +69,12 @@ final class TravelRequestService
             throw new TravelRequestException('Travel request not found');
         }
 
+        $this->assertStatusChanged($travelRequest, $status);
+
+        if ($status === TravelRequestStatusEnum::APROVADO) {
+            $this->assertApprovable($travelRequest);
+        }
+
         if ($status === TravelRequestStatusEnum::CANCELADO) {
             $this->assertCancelable($travelRequest);
         }
@@ -91,6 +97,20 @@ final class TravelRequestService
     {
         if ($travelRequest->status() === TravelRequestStatusEnum::APROVADO) {
             throw new TravelRequestException('Cannot cancel an approved travel request');
+        }
+    }
+
+    private function assertStatusChanged(TravelRequest $travelRequest, TravelRequestStatusEnum $status): void
+    {
+        if ($travelRequest->status() === $status) {
+            throw new TravelRequestException('Travel request already has this status');
+        }
+    }
+
+    private function assertApprovable(TravelRequest $travelRequest): void
+    {
+        if ($travelRequest->status() === TravelRequestStatusEnum::CANCELADO) {
+            throw new TravelRequestException('Cannot approve a canceled travel request');
         }
     }
 

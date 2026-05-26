@@ -28,11 +28,15 @@ As notificações são enviadas para o exchange `travel_request_notifications`, 
 - Um usuário precisa estar autenticado para criar, listar ou consultar pedidos de viagem.
 - Ao criar um pedido, o dono do pedido é sempre o usuário logado.
 - O payload de criação não recebe nome do solicitante; o vínculo é feito por `user_id`.
+- As respostas da API retornam `user_name` no lugar de `user_id`.
 - Todo pedido nasce com status `solicitado`.
 - A listagem `/api/travel-requests` retorna apenas pedidos do usuário logado.
 - A consulta `/api/travel-requests/{id}` só retorna o pedido se ele pertencer ao usuário logado.
 - Apenas administradores podem alterar o status de um pedido.
 - O status só pode ser atualizado para `aprovado` ou `cancelado`.
+- Não é possível atualizar um pedido para o status que ele já possui.
+- Um pedido aprovado não pode ser cancelado.
+- Um pedido cancelado não pode ser aprovado novamente.
 - Ao aprovar ou cancelar um pedido, uma notificação por e-mail é publicada no RabbitMQ.
 
 ## Fluxo principal

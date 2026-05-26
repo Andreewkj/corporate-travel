@@ -52,7 +52,7 @@ final class TravelRequestApiTest extends TestCase
     public function test_it_lists_travel_requests_using_filters(): void
     {
         /** @var User $user */
-        $user = User::factory()->create();
+        $user = User::factory()->create(['name' => 'Ana Silva']);
         /** @var User $anotherUser */
         $anotherUser = User::factory()->create();
 
@@ -79,13 +79,17 @@ final class TravelRequestApiTest extends TestCase
             ->assertJsonFragment([
                 'destination' => 'Recife',
                 'status' => 'aprovado',
+                'user_name' => 'Ana Silva',
+            ])
+            ->assertJsonMissing([
+                'user_id' => $user->id,
             ]);
     }
 
     public function test_it_rejects_invalid_filters(): void
     {
         /** @var User $user */
-        $user = User::factory()->create();
+        $user = User::factory()->create(['name' => 'Ana Silva']);
 
         $response = $this->actingAs($user)->getJson('/api/travel-requests?status=invalido');
 
@@ -98,7 +102,7 @@ final class TravelRequestApiTest extends TestCase
     public function test_user_can_show_only_own_travel_request(): void
     {
         /** @var User $user */
-        $user = User::factory()->create();
+        $user = User::factory()->create(['name' => 'Ana Silva']);
         /** @var User $anotherUser */
         $anotherUser = User::factory()->create();
 
@@ -123,6 +127,9 @@ final class TravelRequestApiTest extends TestCase
             ->assertOk()
             ->assertJsonFragment([
                 'id' => $ownTravelRequest->id,
+                'user_name' => 'Ana Silva',
+            ])
+            ->assertJsonMissing([
                 'user_id' => $user->id,
             ]);
 
@@ -137,7 +144,7 @@ final class TravelRequestApiTest extends TestCase
         $this->app->instance(MessageBusPublisher::class, $fakePublisher);
 
         /** @var User $requester */
-        $requester = User::factory()->create();
+        $requester = User::factory()->create(['name' => 'Ana Silva']);
         /** @var User $admin */
         $admin = User::factory()->create(['is_admin' => true]);
 
@@ -154,7 +161,11 @@ final class TravelRequestApiTest extends TestCase
         ]);
 
         $response->assertOk()
-            ->assertJsonPath('data.status', 'aprovado');
+            ->assertJsonPath('data.status', 'aprovado')
+            ->assertJsonPath('data.user_name', 'Ana Silva')
+            ->assertJsonMissing([
+                'user_id' => $requester->id,
+            ]);
 
         $this->assertDatabaseHas('travel_requests', [
             'id' => $travelRequest->id,
@@ -189,10 +200,73 @@ final class TravelRequestApiTest extends TestCase
             ]);
     }
 
+    public function test_admin_cannot_approve_canceled_travel_request(): void
+    {
+        /** @var User $requester */
+        $requester = User::factory()->create();
+        /** @var User $admin */
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $travelRequest = TravelRequestModel::create([
+            'user_id' => $requester->id,
+            'destination' => 'Recife',
+            'start_date' => '2026-06-01',
+            'end_date' => '2026-06-05',
+            'status' => 'cancelado',
+        ]);
+
+        $response = $this->actingAs($admin)->putJson("/api/travel-requests/{$travelRequest->id}/status", [
+            'status' => 'aprovado',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJson([
+                'message' => 'Cannot approve a canceled travel request',
+            ]);
+
+        $this->assertDatabaseHas('travel_requests', [
+            'id' => $travelRequest->id,
+            'status' => 'cancelado',
+        ]);
+    }
+
+    public function test_admin_cannot_update_travel_request_to_same_status(): void
+    {
+        /** @var User $requester */
+        $requester = User::factory()->create();
+        /** @var User $admin */
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $travelRequest = TravelRequestModel::create([
+            'user_id' => $requester->id,
+            'destination' => 'Recife',
+            'start_date' => '2026-06-01',
+            'end_date' => '2026-06-05',
+            'status' => 'aprovado',
+        ]);
+
+        $response = $this->actingAs($admin)->putJson("/api/travel-requests/{$travelRequest->id}/status", [
+            'status' => 'aprovado',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJson([
+                'message' => 'Travel request already has this status',
+            ]);
+
+        $this->assertDatabaseHas('travel_requests', [
+            'id' => $travelRequest->id,
+            'status' => 'aprovado',
+        ]);
+    }
+
     public function test_admin_can_update_own_status(): void
     {
         /** @var User $requester */
-        $requester = User::factory()->create(['is_admin' => true]);
+        $requester = User::factory()->create([
+            'name' => 'Ana Silva',
+            'is_admin' => true,
+        ]);
 
         $travelRequest = TravelRequestModel::create([
             'user_id' => $requester->id,
@@ -207,7 +281,11 @@ final class TravelRequestApiTest extends TestCase
         ]);
 
         $response->assertOk()
-            ->assertJsonPath('data.status', 'aprovado');
+            ->assertJsonPath('data.status', 'aprovado')
+            ->assertJsonPath('data.user_name', 'Ana Silva')
+            ->assertJsonMissing([
+                'user_id' => $requester->id,
+            ]);
 
         $this->assertDatabaseHas('travel_requests', [
             'id' => $travelRequest->id,

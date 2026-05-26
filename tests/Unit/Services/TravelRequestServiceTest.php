@@ -55,6 +55,52 @@ final class TravelRequestServiceTest extends TestCase
         $service->updateStatus(1, \App\Domain\Enums\TravelRequestStatusEnum::CANCELADO, $this->user(99, true));
     }
 
+    public function test_cannot_approve_after_canceled(): void
+    {
+        $mockRepo = $this->createMock(TravelRequestRepositoryInterface::class);
+
+        $mockRepo->method('find')
+            ->willReturn(TravelRequest::fromArray([
+                'id' => 1,
+                'destination' => 'Recife',
+                'start_date' => '2026-06-01',
+                'end_date' => '2026-06-05',
+                'status' => 'cancelado',
+            ]));
+
+        $mockRepo->expects($this->never())->method('save');
+
+        $service = new TravelRequestService($mockRepo);
+
+        $this->expectException(\App\Domain\Exceptions\TravelRequestException::class);
+        $this->expectExceptionMessage('Cannot approve a canceled travel request');
+
+        $service->updateStatus(1, \App\Domain\Enums\TravelRequestStatusEnum::APROVADO, $this->user(99, true));
+    }
+
+    public function test_cannot_update_to_same_status(): void
+    {
+        $mockRepo = $this->createMock(TravelRequestRepositoryInterface::class);
+
+        $mockRepo->method('find')
+            ->willReturn(TravelRequest::fromArray([
+                'id' => 1,
+                'destination' => 'Recife',
+                'start_date' => '2026-06-01',
+                'end_date' => '2026-06-05',
+                'status' => 'aprovado',
+            ]));
+
+        $mockRepo->expects($this->never())->method('save');
+
+        $service = new TravelRequestService($mockRepo);
+
+        $this->expectException(\App\Domain\Exceptions\TravelRequestException::class);
+        $this->expectExceptionMessage('Travel request already has this status');
+
+        $service->updateStatus(1, \App\Domain\Enums\TravelRequestStatusEnum::APROVADO, $this->user(99, true));
+    }
+
     public function test_cancel_sets_status_to_cancelado(): void
     {
         $mockRepo = $this->createMock(TravelRequestRepositoryInterface::class);

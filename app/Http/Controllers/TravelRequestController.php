@@ -7,11 +7,13 @@ namespace App\Http\Controllers;
 use App\Application\Services\TravelRequestService;
 use App\Domain\Contracts\CreateTravelRequestValidateInterface;
 use App\Domain\Contracts\LoggerInterface;
+use App\Domain\Entities\TravelRequest;
 use App\Domain\Enums\HttpStatusCodeEnum;
 use App\Domain\Enums\TravelRequestStatusEnum;
 use App\Domain\Exceptions\TravelRequestException;
 use App\Http\Requests\CreateTravelRequest;
 use App\Http\Requests\UpdateTravelStatusRequest;
+use App\Models\User;
 use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
@@ -66,7 +68,7 @@ final class TravelRequestController extends Controller
                 return response()->json(['message' => 'Not found'], 404);
             }
             return response()->json(
-                $found->toArray(),
+                $this->presentTravelRequest($found),
                 HttpStatusCodeEnum::OK->value
             );
         } catch (Exception $e) {
@@ -94,7 +96,7 @@ final class TravelRequestController extends Controller
             $all = $this->service->all($filters);
 
             return response()->json(
-                array_map(fn($e) => $e->toArray(), $all),
+                array_map(fn($e) => $this->presentTravelRequest($e), $all),
                 HttpStatusCodeEnum::OK->value
             );
         } catch (ValidationException $e) {
@@ -127,7 +129,7 @@ final class TravelRequestController extends Controller
             return response()->json(
                 [
                     'message' => 'Status updated',
-                    'data' => $updated->toArray(),
+                    'data' => $this->presentTravelRequest($updated),
                 ],
                 HttpStatusCodeEnum::OK->value
             );
@@ -152,4 +154,14 @@ final class TravelRequestController extends Controller
         }
     }
 
+    private function presentTravelRequest(TravelRequest $travelRequest): array
+    {
+        $data = $travelRequest->toArray();
+        $userId = $data['user_id'] ?? null;
+        unset($data['user_id']);
+
+        $data['user_name'] = $userId ? User::find($userId)?->name : null;
+
+        return $data;
+    }
 }

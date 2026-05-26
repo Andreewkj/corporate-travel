@@ -23,6 +23,8 @@ O Eloquent é usado na camada de infraestrutura para persistência, enquanto a a
 
 As notificações são enviadas para o exchange `travel_request_notifications`, usando a fila `notify_email`.
 
+Uma decisão tomada na regra de alteração de status foi tratar a permissão administrativa como soberana. Ou seja: usuários comuns não podem alterar status, mas um usuário administrador pode alterar o status de qualquer pedido, inclusive um pedido criado por ele mesmo. Entendi dessa forma porque o desafio não restringe administradores de criarem pedidos de viagem, e bloquear o próprio pedido criaria uma exceção não descrita para esse perfil.
+
 ## Regras de negócio
 
 - Um usuário precisa estar autenticado para criar, listar ou consultar pedidos de viagem.
@@ -33,6 +35,7 @@ As notificações são enviadas para o exchange `travel_request_notifications`, 
 - A listagem `/api/travel-requests` retorna apenas pedidos do usuário logado.
 - A consulta `/api/travel-requests/{id}` só retorna o pedido se ele pertencer ao usuário logado.
 - Apenas administradores podem alterar o status de um pedido.
+- Um administrador pode alterar o status de pedidos criados por ele mesmo.
 - O status só pode ser atualizado para `aprovado` ou `cancelado`.
 - Não é possível atualizar um pedido para o status que ele já possui.
 - Um pedido aprovado não pode ser cancelado.

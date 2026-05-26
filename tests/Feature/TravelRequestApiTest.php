@@ -262,6 +262,9 @@ final class TravelRequestApiTest extends TestCase
 
     public function test_admin_can_update_own_status(): void
     {
+        $fakePublisher = new FakeMessageBusPublisher();
+        $this->app->instance(MessageBusPublisher::class, $fakePublisher);
+
         /** @var User $requester */
         $requester = User::factory()->create([
             'name' => 'Ana Silva',
@@ -292,5 +295,7 @@ final class TravelRequestApiTest extends TestCase
             'user_id' => $requester->id,
             'status' => 'aprovado',
         ]);
+
+        $this->assertCount(1, $fakePublisher->publishedPayloads);
     }
 }

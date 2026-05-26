@@ -47,10 +47,6 @@ final class TravelRequestRepository implements TravelRequestRepositoryInterface
             $query->where('destination', 'like', '%' . $filters['destination'] . '%');
         }
 
-        if (! empty($filters['requester_name'])) {
-            $query->where('requester_name', 'like', '%' . $filters['requester_name'] . '%');
-        }
-
         if (! empty($filters['start_date'])) {
             $query->whereDate('start_date', '>=', $filters['start_date']);
         }

@@ -16,7 +16,6 @@ class CreateTravelRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'requester_name' => 'required|string|max:255',
             'destination' => 'required|string|max:255',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',

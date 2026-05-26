@@ -11,7 +11,6 @@ final class TravelRequestEntityTest extends TestCase
     {
         $data = [
             'id' => 123,
-            'requester_name' => 'Ana',
             'destination' => 'Recife',
             'start_date' => '2026-06-01',
             'end_date' => '2026-06-05',
@@ -23,7 +22,6 @@ final class TravelRequestEntityTest extends TestCase
         $this->assertSame('solicitado', $entity->status()->value);
 
         $array = $entity->toArray();
-        $this->assertSame($data['requester_name'], $array['requester_name']);
         $this->assertSame($data['destination'], $array['destination']);
         $this->assertSame($data['start_date'], $array['start_date']);
         $this->assertSame($data['end_date'], $array['end_date']);

@@ -6,14 +6,12 @@ namespace App\Domain\Entities;
 
 use App\Domain\Enums\TravelRequestStatusEnum;
 use App\Domain\VO\Destination;
-use App\Domain\VO\RequesterName;
 use App\Domain\VO\TravelDate;
 
 final class TravelRequest
 {
     public function __construct(
         private ?int $id,
-        private RequesterName $requesterName,
         private Destination $destination,
         private TravelDate $startDate,
         private ?TravelDate $endDate,
@@ -24,11 +22,6 @@ final class TravelRequest
     public function id(): ?int
     {
         return $this->id;
-    }
-
-    public function requesterName(): RequesterName
-    {
-        return $this->requesterName;
     }
 
     public function destination(): Destination
@@ -64,7 +57,6 @@ final class TravelRequest
 
         return new self(
             $data['id'] ?? null,
-            new RequesterName($data['requester_name']),
             new Destination($data['destination']),
             new TravelDate($data['start_date']),
             isset($data['end_date']) ? new TravelDate($data['end_date']) : null,
@@ -77,7 +69,6 @@ final class TravelRequest
     {
         return [
             'id' => $this->id,
-            'requester_name' => (string) $this->requesterName,
             'destination' => (string) $this->destination,
             'start_date' => (string) $this->startDate,
             'end_date' => $this->endDate ? (string) $this->endDate : null,

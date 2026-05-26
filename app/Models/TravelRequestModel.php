@@ -11,7 +11,6 @@ class TravelRequestModel extends Model
     protected $table = 'travel_requests';
 
     protected $fillable = [
-        'requester_name',
         'user_id',
         'destination',
         'start_date',

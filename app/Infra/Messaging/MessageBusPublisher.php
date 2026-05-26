@@ -9,20 +9,21 @@ use PhpAmqpLib\Message\AMQPMessage;
 
 class MessageBusPublisher
 {
+    private const EXCHANGE = 'travel_request_notifications';
+
     protected ?AMQPChannel $channel = null;
 
     public function __construct(protected RabbitMQConnectionFactory $connectionFactory) {}
 
     public function publishNotification(array $payload): void
     {
-        $email = $payload['user_email'] ?? $payload['email'] ?? null;
+        $email = $payload['user_email'] ?? null;
 
         if (! $email) {
             return;
         }
 
         $emailPayload = json_encode([
-            'requester' => $payload['requester_name'] ?? null,
             'travel_request_id' => $payload['id'] ?? null,
             'status' => $payload['status'] ?? null,
             'message' => $payload['message'] ?? "Seu pedido de viagem foi atualizado",
@@ -38,7 +39,7 @@ class MessageBusPublisher
             'delivery_mode' => 2
         ]);
 
-        $this->channel()->basic_publish($msg, 'transfer_notifications', $routingKey);
+        $this->channel()->basic_publish($msg, self::EXCHANGE, $routingKey);
     }
 
     protected function channel(): AMQPChannel
@@ -51,7 +52,7 @@ class MessageBusPublisher
         $this->channel = $connection->channel();
 
         $this->channel->exchange_declare(
-            'transfer_notifications',
+            self::EXCHANGE,
             'direct',
             false,
             true,

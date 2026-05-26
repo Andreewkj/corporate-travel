@@ -13,6 +13,7 @@ use App\Domain\Exceptions\TravelRequestException;
 use App\Http\Requests\CreateTravelRequest;
 use App\Http\Requests\UpdateTravelStatusRequest;
 use Exception;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -29,13 +30,11 @@ final class TravelRequestController extends Controller
     public function store(CreateTravelRequest $request): JsonResponse
     {
         try {
-            $travelRequestDto = $this->validator->validate($request->validated());
+            $user = $request->user();
+            $data = $request->validated();
+            $data['user_id'] = $user->id;
 
-            // associate with authenticated user when available
-            $user = auth()->user();
-            if ($user) {
-                $travelRequestDto->userId = $user->id;
-            }
+            $travelRequestDto = $this->validator->validate($data);
 
             $this->service->create($travelRequestDto);
 
@@ -59,10 +58,10 @@ final class TravelRequestController extends Controller
         }
     }
 
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
         try {
-            $found = $this->service->find($id);
+            $found = $this->service->findForUser($id, $request->user()->id);
             if (! $found) {
                 return response()->json(['message' => 'Not found'], 404);
             }
@@ -87,11 +86,10 @@ final class TravelRequestController extends Controller
             $filters = $request->validate([
                 'status' => 'sometimes|in:solicitado,aprovado,cancelado',
                 'destination' => 'sometimes|string|max:255',
-                'requester_name' => 'sometimes|string|max:255',
                 'start_date' => 'sometimes|date',
                 'end_date' => 'sometimes|date|after_or_equal:start_date',
-                'user_id' => 'sometimes|integer',
             ]);
+            $filters['user_id'] = $request->user()->id;
 
             $all = $this->service->all($filters);
 
@@ -124,7 +122,7 @@ final class TravelRequestController extends Controller
             $data = $request->validated();
             $status = TravelRequestStatusEnum::from($data['status']);
 
-            $updated = $this->service->updateStatus($id, $status);
+            $updated = $this->service->updateStatus($id, $status, $request->user());
 
             return response()->json(
                 [
@@ -132,6 +130,11 @@ final class TravelRequestController extends Controller
                     'data' => $updated->toArray(),
                 ],
                 HttpStatusCodeEnum::OK->value
+            );
+        } catch (AuthorizationException $e) {
+            return response()->json(
+                ['message' => $e->getMessage()],
+                HttpStatusCodeEnum::FORBIDDEN->value
             );
         } catch (InvalidArgumentException | TravelRequestException $e) {
             return response()->json(

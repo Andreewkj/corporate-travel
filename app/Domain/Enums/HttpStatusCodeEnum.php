@@ -8,6 +8,7 @@ enum HttpStatusCodeEnum: int
 {
     case OK = 200;
     case CREATED = 201;
+    case FORBIDDEN = 403;
     case UNPROCESSABLE_ENTITY = 422;
     case INTERNAL_SERVER_ERROR = 500;
 }

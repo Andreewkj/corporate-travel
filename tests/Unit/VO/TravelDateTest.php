@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 use App\Domain\VO\TravelDate;
-use InvalidArgumentException;
 
 final class TravelDateTest extends TestCase
 {
@@ -16,7 +15,7 @@ final class TravelDateTest extends TestCase
 
     public function test_invalid_date_throws_exception(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
         new TravelDate('invalid-date');
     }
 }

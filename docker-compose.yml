@@ -15,7 +15,7 @@ services:
             - rabbitmq
         networks:
             - project
-        entrypoint: ["entrypoint.sh", "php-fpm"]
+        command: ["php-fpm"]
 
     web:
         image: nginx:alpine

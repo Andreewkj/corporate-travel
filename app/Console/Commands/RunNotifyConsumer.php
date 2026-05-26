@@ -10,6 +10,8 @@ use Illuminate\Console\Command;
 
 class RunNotifyConsumer extends Command
 {
+    private const EXCHANGE = 'travel_request_notifications';
+
     protected $signature = 'consumer:notify';
     protected $description = 'Init consumer to notify users';
 
@@ -25,7 +27,7 @@ class RunNotifyConsumer extends Command
     {
         $channel = $this->channelFactory->makeWithMultipleQueues([
             'notify_email' => ['routing_key' => 'email'],
-        ], 'transfer_notifications');
+        ], self::EXCHANGE);
 
         $channel->basic_consume('notify_email', '', false, false, false, false, [$this->notifyConsumer, 'consumeEmail']);
 

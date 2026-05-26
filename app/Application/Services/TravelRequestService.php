@@ -10,6 +10,7 @@ use App\Domain\Entities\TravelRequest;
 use App\Domain\Enums\TravelRequestStatusEnum;
 use App\Domain\Exceptions\TravelRequestException;
 use App\Infra\Messaging\MessageBusPublisher;
+use Illuminate\Auth\Access\AuthorizationException;
 use App\Models\User as UserModel;
 
 final class TravelRequestService
@@ -19,14 +20,10 @@ final class TravelRequestService
         private ?MessageBusPublisher $publisher = null
     ) {}
 
-    /**
-     * @throws TravelRequestException
-     */
     public function create(CreateTravelRequestDTO $dto): TravelRequest
     {
         try {
             $travel = TravelRequest::fromArray([
-                'requester_name' => $dto->requesterName,
                 'destination' => $dto->destination,
                 'start_date' => $dto->startDate,
                 'end_date' => $dto->endDate,
@@ -45,26 +42,34 @@ final class TravelRequestService
         return $this->repository->find($id);
     }
 
-    /**
-     * @return TravelRequest[]
-     */
+    public function findForUser(int $id, int $userId): ?TravelRequest
+    {
+        $travelRequest = $this->repository->find($id);
+
+        if (! $travelRequest || $travelRequest->userId() !== $userId) {
+            return null;
+        }
+
+        return $travelRequest;
+    }
+
     public function all(array $filters = []): array
     {
         return $this->repository->all($filters);
     }
 
-    /**
-     * @throws TravelRequestException
-     */
-    public function updateStatus(int $id, TravelRequestStatusEnum $status): TravelRequest
+    public function updateStatus(int $id, TravelRequestStatusEnum $status, UserModel $actor): TravelRequest
     {
+        $this->assertAdmin($actor);
+
         $travelRequest = $this->repository->find($id);
 
         if (! $travelRequest) {
             throw new TravelRequestException('Travel request not found');
         }
 
-        // Business rule: do not allow canceling a request that is already approved
+        $this->assertNotRequester($travelRequest, $actor);
+
         if ($status === TravelRequestStatusEnum::CANCELADO) {
             $this->assertCancelable($travelRequest);
         }
@@ -87,6 +92,20 @@ final class TravelRequestService
     {
         if ($travelRequest->status() === TravelRequestStatusEnum::APROVADO) {
             throw new TravelRequestException('Cannot cancel an approved travel request');
+        }
+    }
+
+    private function assertAdmin(UserModel $actor): void
+    {
+        if (! $actor->is_admin) {
+            throw new AuthorizationException('Only administrators can update travel request status');
+        }
+    }
+
+    private function assertNotRequester(TravelRequest $travelRequest, UserModel $actor): void
+    {
+        if ($travelRequest->userId() !== null && $travelRequest->userId() === $actor->id) {
+            throw new AuthorizationException('The requester cannot update their own travel request status');
         }
     }
 

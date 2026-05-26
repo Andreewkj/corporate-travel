@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infra\Messaging;
 
+use App\Application\DTO\Travel\TravelRequestNotificationDTO;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Message\AMQPMessage;
 
@@ -15,20 +16,9 @@ class MessageBusPublisher
 
     public function __construct(protected RabbitMQConnectionFactory $connectionFactory) {}
 
-    public function publishNotification(array $payload): void
+    public function publishNotification(TravelRequestNotificationDTO $payload): void
     {
-        $email = $payload['user_email'] ?? null;
-
-        if (! $email) {
-            return;
-        }
-
-        $emailPayload = json_encode([
-            'travel_request_id' => $payload['id'] ?? null,
-            'status' => $payload['status'] ?? null,
-            'message' => $payload['message'] ?? "Seu pedido de viagem foi atualizado",
-            'email' => $email,
-        ]);
+        $emailPayload = json_encode($payload->toArray());
 
         $this->publish('email', $emailPayload);
     }

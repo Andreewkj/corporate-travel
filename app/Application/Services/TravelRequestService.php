@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Services;
 
 use App\Application\DTO\Travel\CreateTravelRequestDTO;
+use App\Application\DTO\Travel\TravelRequestNotificationDTO;
 use App\Domain\Contracts\Repositories\TravelRequestRepositoryInterface;
 use App\Domain\Entities\TravelRequest;
 use App\Domain\Enums\TravelRequestStatusEnum;
@@ -68,8 +69,6 @@ final class TravelRequestService
             throw new TravelRequestException('Travel request not found');
         }
 
-        $this->assertNotRequester($travelRequest, $actor);
-
         if ($status === TravelRequestStatusEnum::CANCELADO) {
             $this->assertCancelable($travelRequest);
         }
@@ -102,13 +101,6 @@ final class TravelRequestService
         }
     }
 
-    private function assertNotRequester(TravelRequest $travelRequest, UserModel $actor): void
-    {
-        if ($travelRequest->userId() !== null && $travelRequest->userId() === $actor->id) {
-            throw new AuthorizationException('The requester cannot update their own travel request status');
-        }
-    }
-
     private function shouldNotify(TravelRequestStatusEnum $status): bool
     {
         return in_array($status, [
@@ -117,22 +109,27 @@ final class TravelRequestService
         ], true);
     }
 
-    private function notificationPayload(TravelRequest $travelRequest, TravelRequestStatusEnum $status): array
+    private function notificationPayload(TravelRequest $travelRequest, TravelRequestStatusEnum $status): TravelRequestNotificationDTO
     {
-        $payload = $travelRequest->toArray();
-        $payload['message'] = match ($status) {
+        $message = match ($status) {
             TravelRequestStatusEnum::APROVADO => 'Seu pedido de viagem foi aprovado',
             TravelRequestStatusEnum::CANCELADO => 'Seu pedido de viagem foi cancelado',
             default => 'Seu pedido de viagem foi atualizado',
         };
 
-        if ($travelRequest->userId()) {
-            $user = UserModel::find($travelRequest->userId());
-            if ($user) {
-                $payload['user_email'] = $user->email;
-            }
+        $user = $travelRequest->userId()
+            ? UserModel::find($travelRequest->userId())
+            : null;
+
+        if (! $user) {
+            throw new TravelRequestException('Could not find user to notify');
         }
 
-        return $payload;
+        return new TravelRequestNotificationDTO(
+            $travelRequest->id(),
+            $status->value,
+            $message,
+            $user->email
+        );
     }
 }

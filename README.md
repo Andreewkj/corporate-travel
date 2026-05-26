@@ -1,58 +1,390 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# MS Corporate Travel
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## Sobre o projeto
 
-## About Laravel
+Este projeto é uma API para gerenciamento de pedidos de viagem corporativa.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+O usuário autenticado pode criar pedidos de viagem, listar apenas os próprios pedidos, consultar um pedido específico e acompanhar seu status. A alteração de status é restrita a usuários administradores.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Quando um pedido é aprovado ou cancelado, o sistema publica uma notificação no RabbitMQ para envio de e-mail ao usuário.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Arquitetura e decisões técnicas
 
-## Learning Laravel
+O projeto foi construído com Laravel, mas mantendo boa parte da regra de negócio fora dos controllers.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+A aplicação usa uma separação em camadas com:
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- `Domain`: entidades, enums, contratos, exceptions e value objects.
+- `Application`: DTOs e services com as regras de negócio.
+- `Infra`: repositories, mensageria, consumers e integrações.
+- `Http`: controllers e validações de entrada.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+O Eloquent é usado na camada de infraestrutura para persistência, enquanto a aplicação trabalha com entidades de domínio. A publicação de notificações fica isolada no `MessageBusPublisher`, e o consumo das mensagens acontece pelo comando `consumer:notify`.
 
-## Agentic Development
+As notificações são enviadas para o exchange `travel_request_notifications`, usando a fila `notify_email`.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Regras de negócio
+
+- Um usuário precisa estar autenticado para criar, listar ou consultar pedidos de viagem.
+- Ao criar um pedido, o dono do pedido é sempre o usuário logado.
+- O payload de criação não recebe nome do solicitante; o vínculo é feito por `user_id`.
+- Todo pedido nasce com status `solicitado`.
+- A listagem `/api/travel-requests` retorna apenas pedidos do usuário logado.
+- A consulta `/api/travel-requests/{id}` só retorna o pedido se ele pertencer ao usuário logado.
+- Apenas administradores podem alterar o status de um pedido.
+- O status só pode ser atualizado para `aprovado` ou `cancelado`.
+- Ao aprovar ou cancelar um pedido, uma notificação por e-mail é publicada no RabbitMQ.
+
+## Fluxo principal
+
+1. Criar ou logar com um usuário.
+2. Enviar o token recebido no login como Bearer Token.
+3. Criar um pedido de viagem.
+4. Um usuário administrador atualiza o status para `aprovado` ou `cancelado`.
+5. O sistema publica a notificação no RabbitMQ.
+6. O consumer `consumer:notify` consome a fila `notify_email` e envia o e-mail.
+
+## Configuração com Docker
+
+Antes de executar o setup, dê permissão aos scripts:
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+chmod +x setup.sh
+chmod +x docker/wait-for-it.sh
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Para subir o projeto pela primeira vez:
 
-## Contributing
+```bash
+./setup.sh
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Esse comando copia o `.env.example`, sobe os containers, instala as dependências, gera a chave da aplicação, recria o banco e roda os seeders.
 
-## Code of Conduct
+Se preferir executar manualmente:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+docker compose up -d --build
+until docker compose exec -T mysql mysqladmin ping -h127.0.0.1 -uroot -ppassword --silent; do sleep 2; done
+docker compose exec app git config --global --add safe.directory /var/www/html
+docker compose exec app composer install
+docker compose exec app php artisan key:generate
+docker compose exec app php artisan migrate:fresh --seed
+docker compose exec app chmod -R 777 storage bootstrap/cache
+```
 
-## Security Vulnerabilities
+Para limpar completamente o ambiente local, incluindo o volume do banco:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+docker compose down -v
+```
 
-## License
+A API fica disponível em:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+http://localhost:8080
+```
+
+## Usuários do seeder
+
+Administrador:
+
+```json
+{
+  "email": "admin@example.com",
+  "password": "password"
+}
+```
+
+Usuário comum:
+
+```json
+{
+  "email": "test@example.com",
+  "password": "password"
+}
+```
+
+## Rotas da API
+
+### Criar usuário
+
+```http
+POST /api/user/create
+```
+
+Body:
+
+```json
+{
+  "name": "Ana Silva",
+  "email": "ana@example.com",
+  "password": "password"
+}
+```
+
+Curl:
+
+```bash
+curl -X POST http://localhost:8080/api/user/create \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{
+    "name": "Ana Silva",
+    "email": "ana@example.com",
+    "password": "password"
+  }'
+```
+
+### Login
+
+```http
+POST /api/user/login
+```
+
+Body:
+
+```json
+{
+  "email": "test@example.com",
+  "password": "password"
+}
+```
+
+Curl:
+
+```bash
+curl -X POST http://localhost:8080/api/user/login \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "password"
+  }'
+```
+
+Resposta:
+
+```json
+{
+  "token": "TOKEN_GERADO"
+}
+```
+
+Use o token nas rotas protegidas:
+
+```http
+Authorization: Bearer TOKEN_GERADO
+```
+
+Para facilitar os próximos exemplos, você pode salvar o token em uma variável:
+
+```bash
+TOKEN="TOKEN_GERADO"
+```
+
+### Criar pedido de viagem
+
+```http
+POST /api/travel-requests
+```
+
+Body:
+
+```json
+{
+  "destination": "Recife",
+  "start_date": "2026-06-01",
+  "end_date": "2026-06-05"
+}
+```
+
+Curl:
+
+```bash
+curl -X POST http://localhost:8080/api/travel-requests \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "destination": "Recife",
+    "start_date": "2026-06-01",
+    "end_date": "2026-06-05"
+  }'
+```
+
+### Listar pedidos do usuário logado
+
+```http
+GET /api/travel-requests
+```
+
+Filtros opcionais:
+
+- `status`: `solicitado`, `aprovado` ou `cancelado`
+- `destination`
+- `start_date`
+- `end_date`
+
+Exemplo:
+
+```http
+GET /api/travel-requests?status=aprovado&destination=Recife
+```
+
+Curl:
+
+```bash
+curl -X GET "http://localhost:8080/api/travel-requests?status=aprovado&destination=Recife" \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Consultar pedido por ID
+
+```http
+GET /api/travel-requests/{id}
+```
+
+A rota só retorna o pedido se ele pertencer ao usuário autenticado.
+
+Curl:
+
+```bash
+curl -X GET http://localhost:8080/api/travel-requests/1 \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Atualizar status do pedido
+
+```http
+PUT /api/travel-requests/{id}/status
+```
+
+Body:
+
+```json
+{
+  "status": "aprovado"
+}
+```
+
+Curl:
+
+```bash
+curl -X PUT http://localhost:8080/api/travel-requests/1/status \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "status": "aprovado"
+  }'
+```
+
+Status aceitos:
+
+- `aprovado`
+- `cancelado`
+
+Essa rota exige um usuário administrador.
+
+## RabbitMQ
+
+Painel web:
+
+```bash
+http://localhost:15672
+```
+
+Credenciais padrão:
+
+```json
+{
+  "username": "guest",
+  "password": "guest"
+}
+```
+
+Exchange usado pela aplicação:
+
+```bash
+travel_request_notifications
+```
+
+Fila de e-mail:
+
+```bash
+notify_email
+```
+
+Para consumir as notificações:
+
+```bash
+docker compose exec app php artisan consumer:notify
+```
+
+## Testes
+
+Para rodar a suíte de testes:
+
+```bash
+docker compose exec app php artisan test
+```
+
+Os testes usam SQLite em memória via `phpunit.xml`, então não dependem do MySQL.
+
+## CI
+
+O projeto possui GitHub Actions configurado em:
+
+```bash
+.github/workflows/tests.yml
+```
+
+O workflow roda automaticamente em push para `main` e pull requests para `main`.
+
+Ele instala PHP, dependências do Composer e executa:
+
+```bash
+php artisan test
+```
+
+## Comandos úteis
+
+Subir containers:
+
+```bash
+docker compose up -d
+```
+
+Recriar banco e seeders:
+
+```bash
+docker compose exec app php artisan migrate:fresh --seed
+```
+
+Rodar testes:
+
+```bash
+docker compose exec app php artisan test
+```
+
+Rodar consumer:
+
+```bash
+docker compose exec app php artisan consumer:notify
+```
+
+Ver logs:
+
+```bash
+docker compose logs -f app
+```
+
+## Melhorias futuras
+
+- Adicionar documentação interativa da API.
+- Adicionar análise estática no CI.
+- Melhorar observabilidade com logs estruturados e rastreamento.
+- Adicionar retry/backoff configurável para notificações.

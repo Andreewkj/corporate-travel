@@ -189,7 +189,7 @@ final class TravelRequestApiTest extends TestCase
             ]);
     }
 
-    public function test_requester_cannot_update_own_status_even_if_admin(): void
+    public function test_admin_can_update_own_status(): void
     {
         /** @var User $requester */
         $requester = User::factory()->create(['is_admin' => true]);
@@ -206,9 +206,13 @@ final class TravelRequestApiTest extends TestCase
             'status' => 'aprovado',
         ]);
 
-        $response->assertForbidden()
-            ->assertJson([
-                'message' => 'The requester cannot update their own travel request status',
-            ]);
+        $response->assertOk()
+            ->assertJsonPath('data.status', 'aprovado');
+
+        $this->assertDatabaseHas('travel_requests', [
+            'id' => $travelRequest->id,
+            'user_id' => $requester->id,
+            'status' => 'aprovado',
+        ]);
     }
 }

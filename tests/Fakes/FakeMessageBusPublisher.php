@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Fakes;
 
+use App\Application\DTO\Travel\TravelRequestNotificationDTO;
 use App\Infra\Messaging\MessageBusPublisher;
 
 final class FakeMessageBusPublisher extends MessageBusPublisher
@@ -14,8 +15,8 @@ final class FakeMessageBusPublisher extends MessageBusPublisher
     {
     }
 
-    public function publishNotification(array $payload): void
+    public function publishNotification(TravelRequestNotificationDTO $payload): void
     {
-        $this->publishedPayloads[] = $payload;
+        $this->publishedPayloads[] = $payload->toArray();
     }
 }

@@ -129,7 +129,7 @@ final class TravelRequestServiceTest extends TestCase
         $service->updateStatus(3, \App\Domain\Enums\TravelRequestStatusEnum::APROVADO, $this->user(99, false));
     }
 
-    public function test_requester_admin_cannot_update_own_status(): void
+    public function test_admin_can_update_own_status(): void
     {
         $mockRepo = $this->createMock(TravelRequestRepositoryInterface::class);
 
@@ -143,13 +143,22 @@ final class TravelRequestServiceTest extends TestCase
                 'user_id' => 99,
             ]));
 
-        $mockRepo->expects($this->never())->method('save');
+        $mockRepo->expects($this->once())
+            ->method('save')
+            ->willReturn(TravelRequest::fromArray([
+                'id' => 4,
+                'destination' => 'Rio',
+                'start_date' => '2026-09-01',
+                'end_date' => '2026-09-05',
+                'status' => 'aprovado',
+                'user_id' => 99,
+            ]));
 
         $service = new TravelRequestService($mockRepo);
 
-        $this->expectException(\Illuminate\Auth\Access\AuthorizationException::class);
+        $updated = $service->updateStatus(4, \App\Domain\Enums\TravelRequestStatusEnum::APROVADO, $this->user(99, true));
 
-        $service->updateStatus(4, \App\Domain\Enums\TravelRequestStatusEnum::APROVADO, $this->user(99, true));
+        $this->assertSame('aprovado', $updated->toArray()['status']);
     }
 
     private function user(int $id, bool $isAdmin): User
